@@ -10,32 +10,39 @@
 
 [Results](#results) · [Selection](#why-this-model) · [Architecture](#architecture) · [Data](#what-the-data-showed) · [Quick Start](#quick-start) · [API](#api) · [Quality & Benchmarks](#quality-and-benchmarks) · [Trade-offs](#decisions-and-limitations)
 
+
+## Live Demo
+
+The prediction service is deployed on a cloud instance
+and publicly accessible.
+
+- **Live Application:** http://16.16.164.90/
+
 ## Results
 
-January 2025 NYC yellow-taxi trips, restricted to **1–60 minutes**, with a chronological split: **train Jan 1–20**, **validate Jan 21–25**, **test Jan 26–31**. RMSE is measured in minutes.
+January 2025 NYC yellow-taxi trips of **1–60 minutes**, split by date: **train Jan 1–20**,
+**validate Jan 21–25**, **test Jan 26–31**. RMSE in minutes; size is the saved model file.
 
-| Model | Validation RMSE | Test RMSE |
-|---|---:|---:|
-| Overall median | 9.9949 | 10.1225 |
-| Zone-pair median | 5.4437 | 5.4237 |
-| Random Forest baseline | 4.4771 | 4.4837 |
-| **Selected RF · trial-1** | **4.4435** | **4.4415** |
+| Model | Features | Validation RMSE | Test RMSE | Size (MiB) |
+|---|---|---:|---:|---:|
+| Overall median | – | 9.9949 | 10.1225 | – |
+| Zone-pair median | route | 5.4437 | 5.4237 | – |
+| Random Forest | zone IDs | 5.4572 | – | 35.6 |
+| Random Forest | + zone centers, distance | 5.0704 | – | 40.8 |
+| Random Forest baseline | + hour, weekday, holiday | 4.4771 | 4.4837 | 190.7 |
+| Best Optuna trial (trial-15) | all 10 | 4.4286 | – | 671.3 |
+| **Selected model (trial-1)** | **all 10** | **4.4435** | **4.4415** | **112.4** |
 
-The selected model reduces test RMSE by **18.1%** relative to the zone-pair median baseline and is **41.1% smaller** than the RF baseline, with slightly better accuracy. Sizes refer to serialized model artifacts, not Docker images or total deployment sizes.
+**Takeaways**
+- **Location and time drive the gains:** adding zone centers and distance cuts validation RMSE by
+  0.39 min, and adding hour, weekday and holiday by another 0.59 min.
+- **The selected model is 18.1% better** than the zone-pair median on test.
+- **Small at almost no cost:** it is within 0.34% of the best trial on validation, but 6× smaller,
+  and 41% smaller than the RF baseline while slightly more accurate.
 
-### Feature ladder
-
-Random Forests with the RF baseline's settings, fitted on the same training sample and scored on the same validation trips, adding features step by step: zone IDs only, then zone centers and straight-line distance, then all features (the RF baseline). Ladder runs are references, not selection candidates. Source: section 6 of [model_serving_selection.ipynb](notebooks/model_serving_selection.ipynb).
-
-| Model | Validation RMSE | Model size (MiB) |
-|---|---:|---:|
-| Overall median | 9.9949 | – |
-| Zone-pair median | 5.4437 | – |
-| ladder-zones | 5.4572 | 35.6 |
-| ladder-zones-location | 5.0704 | 40.8 |
-| rf-baseline | 4.4771 | 190.7 |
-| Best Optuna trial (trial-15) | 4.4286 | 671.3 |
-| **Selected model (trial-1)** | **4.4435** | **112.4** |
+The selection rule, set before the results: runs within 1% of the best validation RMSE count as tied,
+and the smallest tied model wins (9 of 21 candidates tied). Details:
+[model_serving_selection.ipynb](notebooks/model_serving_selection.ipynb).
 
 ## Why this model?
 
