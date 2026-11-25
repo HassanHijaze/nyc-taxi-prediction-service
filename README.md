@@ -27,17 +27,15 @@ The selected model reduces test RMSE by **18.1%** relative to the zone-pair medi
 
 Random Forests with the RF baseline's settings, fitted on the same training sample and scored on the same validation trips, adding features step by step: zone IDs only, then zone centers and straight-line distance, then all features (the RF baseline). Ladder runs are references, not selection candidates. Source: section 6 of [model_serving_selection.ipynb](notebooks/model_serving_selection.ipynb).
 
-<!-- TODO: fill the TBD cells from the notebook output (section 6) after `uv run nyc-taxi train` and `uv run nyc-taxi select`. -->
-
-| Model | Validation RMSE | Test RMSE | Model size (MiB) |
-|---|---:|---:|---:|
-| Overall median | TBD | TBD | – |
-| Zone-pair median | TBD | TBD | – |
-| ladder-zones | TBD | – | TBD |
-| ladder-zones-location | TBD | – | TBD |
-| rf-baseline | TBD | – | TBD |
-| Best Optuna trial (TBD) | TBD | – | TBD |
-| **Selected model (TBD)** | **TBD** | **TBD** | **TBD** |
+| Model | Validation RMSE | Model size (MiB) |
+|---|---:|---:|
+| Overall median | 9.9949 | – |
+| Zone-pair median | 5.4437 | – |
+| ladder-zones | 5.4572 | 35.6 |
+| ladder-zones-location | 5.0704 | 40.8 |
+| rf-baseline | 4.4771 | 190.7 |
+| Best Optuna trial (trial-15) | 4.4286 | 671.3 |
+| **Selected model (trial-1)** | **4.4435** | **112.4** |
 
 ## Why this model?
 
