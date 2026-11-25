@@ -14,6 +14,10 @@ training-day trips for their statistics.
     baseline-overall-median     median duration of the training trips   (src/baselines.py)
     baseline-zone-pair-median   median per zone pair, unseen pairs get the overall median
     rf-baseline                 Random Forest with BASELINE_PARAMS (also logs model_mb)
+    ladder-zones                feature ladder (tag stage=ladder): BASELINE_PARAMS on the zone IDs only
+    ladder-zones-location       zone IDs + zone centers + straight-line distance; the last ladder step
+                                is rf-baseline itself (all features). Ladder runs are not selection
+                                candidates (src/baselines.py LADDER_RUNS)
 
 Nothing is registered here: `nyc-taxi select` registers the winner.
 
@@ -29,7 +33,7 @@ import mlflow
 import pandas as pd
 
 from src import evaluation as ev
-from src.baselines import NAIVE_BASELINES, RF_BASELINE_RUN
+from src.baselines import LADDER_RUNS, LADDER_STAGE, NAIVE_BASELINES, RF_BASELINE_RUN
 from src.experiment import EXPERIMENT, TRACKING_URI
 from src.features import FEATURES, build_features, build_zone_xy
 
@@ -135,21 +139,46 @@ def log_naive_baselines(splits: Splits) -> dict[str, dict[str, float]]:
     return results
 
 
-def log_rf_baseline(splits: Splits, zone_xy: pd.DataFrame) -> dict[str, float]:
-    """rf-baseline: BASELINE_PARAMS fitted on the training sample, scored on validation."""
-    model = ev.fit_rf(BASELINE_PARAMS, build_features(splits.sample, zone_xy), splits.sample["duration"])
-    pred = model.predict(build_features(splits.val, zone_xy))
+def _log_rf_run(
+    run_name: str,
+    features: list[str],
+    splits: Splits,
+    X_sample: pd.DataFrame,
+    X_val: pd.DataFrame,
+    tags: dict[str, str] | None = None,
+) -> dict[str, float]:
+    """BASELINE_PARAMS fitted on the training sample (only `features`), scored on validation."""
+    model = ev.fit_rf(BASELINE_PARAMS, X_sample[features], splits.sample["duration"])
+    pred = model.predict(X_val[features])
     metrics = ev.score_predictions("val", splits.train, splits.val, pred)
     metrics["model_mb"] = ev.model_size_mb(model)
-    with mlflow.start_run(run_name=BASELINE_RUN_NAME):
-        mlflow.log_params({**BASELINE_PARAMS, "features": ",".join(FEATURES), **period_params(splits)})
+    del model
+    with mlflow.start_run(run_name=run_name):
+        mlflow.log_params({**BASELINE_PARAMS, "features": ",".join(features), **period_params(splits)})
         mlflow.log_metrics(metrics)
-    print(BASELINE_RUN_NAME, {k: round(metrics[k], 4) for k in ("val_rmse", "val_mae", "model_mb")})
+        if tags:
+            mlflow.set_tags(tags)
+    print(run_name, {k: round(metrics[k], 4) for k in ("val_rmse", "val_mae", "model_mb")})
     return metrics
 
 
+def log_rf_baseline(splits: Splits, X_sample: pd.DataFrame, X_val: pd.DataFrame) -> dict[str, float]:
+    """rf-baseline: BASELINE_PARAMS on all FEATURES (a selection candidate)."""
+    return _log_rf_run(BASELINE_RUN_NAME, FEATURES, splits, X_sample, X_val)
+
+
+def log_feature_ladder(
+    splits: Splits, X_sample: pd.DataFrame, X_val: pd.DataFrame
+) -> dict[str, dict[str, float]]:
+    """One run per LADDER_RUNS step (tag stage=ladder); never a selection candidate."""
+    return {
+        run_name: _log_rf_run(run_name, features, splits, X_sample, X_val, tags={"stage": LADDER_STAGE})
+        for run_name, features in LADDER_RUNS.items()
+    }
+
+
 def main() -> dict:
-    """Log the three baseline runs (validation scores only)."""
+    """Log the three baseline runs and the feature-ladder runs (validation scores only)."""
     mlflow.set_tracking_uri(TRACKING_URI)
     mlflow.set_experiment(EXPERIMENT)  # fails fast if the MLflow server is not running
 
@@ -159,7 +188,9 @@ def main() -> dict:
     print("validation:", ev.describe_period(splits.val))
 
     log_naive_baselines(splits)
-    log_rf_baseline(splits, zone_xy)
+    X_sample, X_val = build_features(splits.sample, zone_xy), build_features(splits.val, zone_xy)
+    log_rf_baseline(splits, X_sample, X_val)
+    log_feature_ladder(splits, X_sample, X_val)
     return {}
 
 

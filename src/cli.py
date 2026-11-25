@@ -7,8 +7,9 @@ Every model is fitted on the training days only; test is used once, by select.
 
 Subcommands:
     data     download January 2025 into data/ and build the zone table
-    train    src.train: baselines (overall median, zone-pair median, RF baseline),
-             scored on validation, one MLflow run each
+    train    src.train: baselines (overall median, zone-pair median, RF baseline) and the
+             feature ladder (RF on zone IDs, then + zone locations; not selection
+             candidates), scored on validation, one MLflow run each
     tune     src.tuning: Optuna, 20 trials on validation, run "optuna-tuning"
     select   src.selection: the rule (lowest validation RMSE; within 1% = tied; smallest
              model wins), the winner refitted and scored once on test with the baselines,
@@ -60,7 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
     sub.add_parser("data", help="download January 2025 and build the zone table")
-    sub.add_parser("train", help="baselines (median, zone-pair median, RF) scored on validation")
+    sub.add_parser("train", help="baselines (median, zone-pair median, RF) + feature ladder, on validation")
     sub.add_parser("tune", help="Optuna, 20 trials on validation, logged as MLflow run optuna-tuning")
     sub.add_parser("select", help="apply the rule, score the winner once on test, register it (no alias)")
     sub.add_parser("all", help="data -> train -> tune -> select, stopping on the first error")

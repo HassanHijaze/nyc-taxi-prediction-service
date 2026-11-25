@@ -23,6 +23,22 @@ January 2025 NYC yellow-taxi trips, restricted to **1–60 minutes**, with a chr
 
 The selected model reduces test RMSE by **18.1%** relative to the zone-pair median baseline and is **41.1% smaller** than the RF baseline, with slightly better accuracy. Sizes refer to serialized model artifacts, not Docker images or total deployment sizes.
 
+### Feature ladder
+
+Random Forests with the RF baseline's settings, fitted on the same training sample and scored on the same validation trips, adding features step by step: zone IDs only, then zone centers and straight-line distance, then all features (the RF baseline). Ladder runs are references, not selection candidates. Source: section 6 of [model_serving_selection.ipynb](notebooks/model_serving_selection.ipynb).
+
+<!-- TODO: fill the TBD cells from the notebook output (section 6) after `uv run nyc-taxi train` and `uv run nyc-taxi select`. -->
+
+| Model | Validation RMSE | Test RMSE | Model size (MiB) |
+|---|---:|---:|---:|
+| Overall median | TBD | TBD | – |
+| Zone-pair median | TBD | TBD | – |
+| ladder-zones | TBD | – | TBD |
+| ladder-zones-location | TBD | – | TBD |
+| rf-baseline | TBD | – | TBD |
+| Best Optuna trial (TBD) | TBD | – | TBD |
+| **Selected model (TBD)** | **TBD** | **TBD** | **TBD** |
+
 ## Why this model?
 
 A lower error is useful only if the model is practical to serve. The selection rule uses **validation results**, not test performance:

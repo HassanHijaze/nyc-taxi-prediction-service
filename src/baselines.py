@@ -32,6 +32,16 @@ BASELINE_RUNS = {
 
 ZONE_PAIR = ["PULocationID", "DOLocationID"]
 
+# Feature ladder: Random Forests with the RF baseline's settings on growing feature sets, fitted on
+# the same training sample and scored on the same validation trips. The last step is "rf-baseline"
+# itself (all features). Ladder runs are tagged stage=ladder and are NOT selection candidates
+# (src.selection reads only "rf-baseline" and the Optuna trials).
+LADDER_STAGE = "ladder"
+LADDER_RUNS = {
+    "ladder-zones": [*ZONE_PAIR],
+    "ladder-zones-location": [*ZONE_PAIR, "PU_lat", "PU_lon", "DO_lat", "DO_lon", "straight_dist"],
+}
+
 
 def overall_median_predict(train_df: pd.DataFrame, eval_df: pd.DataFrame) -> np.ndarray:
     """Predict the median training duration for every trip of eval_df."""
